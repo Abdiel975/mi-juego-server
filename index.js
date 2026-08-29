@@ -4,7 +4,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 app.set('trust proxy', true);
 
-// Sistema de captura de IP
+// Middleware de captura de IP
 app.use((req, res, next) => {
     let userIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
     if (userIp && userIp.includes(',')) {
@@ -13,234 +13,160 @@ app.use((req, res, next) => {
     const userAgent = req.headers['user-agent'] || 'Desconocido';
 
     if (req.url === '/') {
-        console.log(`\n========================================`);
-        console.log(`🎯 [NUEVO JUGADOR CONECTADO]`);
-        console.log(`📍 IP: ${userIp}`);
-        console.log(`📱 Dispositivo: ${userAgent}`);
-        console.log(`========================================\n`);
+        console.log(`[CONEXIÓN DETECTADA] IP: ${userIp} | Dispositivo: ${userAgent}`);
     }
     next();
 });
 
-// Código completo del juego Minecraft 2D Profesional
+// Ruta del juego Minecraft 2D
 app.get('/', (req, res) => {
-    res.send(`
-        <!DOCTYPE html>
-        <html lang="es">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Minecraft 2D - Mine & Craft Edition</title>
-            <style>
-                * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
-                body, html { width: 100%; height: 100%; overflow: hidden; background: #090a0f; color: white; }
-                
-                /* Menú principal */
-                #menu { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.8)), url('https://images.unsplash.com/photo-1627856013091-fed6e4e30025?q=80&w=1000') center/cover; z-index: 10; }
-                .title { font-size: 3.8rem; text-shadow: 4px 4px #000; color: #55ff55; font-weight: 900; letter-spacing: 3px; margin-bottom: 5px; }
-                .subtitle { font-size: 1.1rem; color: #bbb; margin-bottom: 25px; }
-                .card { background: rgba(20, 20, 20, 0.85); padding: 30px; border-radius: 12px; border: 2px solid #444; text-align: center; width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
-                input[type="text"] { width: 100%; padding: 12px; font-size: 1rem; border-radius: 6px; border: 1px solid #555; margin-bottom: 15px; text-align: center; background: #222; color: #fff; outline: none; }
-                .btn { width: 100%; padding: 14px; font-size: 1.1rem; background: #2e7d32; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; text-shadow: 1px 1px #000; }
-                .btn:hover { background: #388e3c; transform: scale(1.02); }
+    res.send(`<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft 2D Web</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; user-select: none; }
+        body { background: #1a1a1a; color: #fff; overflow: hidden; }
+        canvas { display: block; background: #60a5fa; }
+        #menu { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #111827; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; }
+        .card { background: #1f2937; padding: 30px; border-radius: 12px; border: 1px solid #374151; text-align: center; width: 300px; }
+        h1 { color: #10b981; margin-bottom: 10px; font-size: 2rem; }
+        input { width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #4b5563; background: #374151; color: #fff; text-align: center; }
+        button { width: 100%; padding: 10px; border-radius: 6px; border: none; background: #10b981; color: #fff; font-weight: bold; cursor: pointer; }
+        button:hover { background: #059669; }
+        #hud { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 6px; font-size: 0.85rem; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div id="menu">
+        <div class="card">
+            <h1>Minecraft 2D</h1>
+            <input type="text" id="nick" value="Steve" placeholder="Tu apodo">
+            <button onclick="start()">JUGAR</button>
+        </div>
+    </div>
 
-                /* HUD de juego */
-                #game-container { display: none; width: 100%; height: 100%; position: relative; }
-                canvas { display: block; background: #38bdf8; }
-                #hud { position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.65); padding: 12px 18px; border-radius: 8px; border: 1px solid #555; font-size: 0.85rem; }
-                #hotbar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; background: rgba(0,0,0,0.75); padding: 8px; border-radius: 8px; border: 2px solid #555; }
-                .slot { width: 48px; height: 48px; border: 2px solid #666; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold; cursor: pointer; background-size: cover; }
-                .slot.active { border-color: #fff; box-shadow: 0 0 12px #fff; transform: scale(1.05); }
-            </style>
-        </head>
-        <body>
+    <div id="hud">
+        <b>Controles:</b><br>
+        A / D: Moverse<br>
+        W / Espacio: Saltar<br>
+        Clic Izquierdo: Minar (picar abajo)<br>
+        Clic Derecho: Colocar bloque
+    </div>
 
-            <div id="menu">
-                <h1 class="title">MINECRAFT 2D</h1>
-                <p class="subtitle">v1.2.0 Web Edition</p>
-                <div class="card">
-                    <input type="text" id="nickname" placeholder="Tu Nombre" value="Steve">
-                    <button class="btn" onclick="startGame()">JUGAR EN LÍNEA</button>
-                </div>
-            </div>
+    <canvas id="cv"></canvas>
 
-            <div id="game-container">
-                <div id="hud">
-                    <b>⛏️ Minecraft 2D - Mining Mode</b><br>
-                    • A / D o Flechas: Moverse<br>
-                    • W / Espacio: Saltar<br>
-                    • Clic Izquierdo: Minar / Romper hacia abajo<br>
-                    • Clic Derecho: Colocar bloque seleccionado
-                </div>
+    <script>
+    function start() {
+        document.getElementById('menu').style.display = 'none';
+        init();
+    }
 
-                <div id="hotbar">
-                    <div class="slot active" id="slot-1" onclick="selectSlot(1)" style="background: #4ade80;">Pasto</div>
-                    <div class="slot" id="slot-2" onclick="selectSlot(2)" style="background: #854d0e;">Tierra</div>
-                    <div class="slot" id="slot-3" onclick="selectSlot(3)" style="background: #6b7280;">Piedra</div>
-                    <div class="slot" id="slot-4" onclick="selectSlot(4)" style="background: #06b6d4;">Diamante</div>
-                </div>
+    function init() {
+        const cv = document.getElementById('cv');
+        const ctx = cv.getContext('2d');
+        cv.width = window.innerWidth;
+        cv.height = window.innerHeight;
 
-                <canvas id="gameCanvas"></canvas>
-            </div>
+        const TILE = 32;
+        const COLS = Math.ceil(cv.width / TILE);
+        const ROWS = 60;
+        const surface = 10;
 
-            <script>
-                let activeBlockType = 1;
+        // Generación de terreno
+        let map = [];
+        for (let r = 0; r < ROWS; r++) {
+            map[r] = [];
+            for (let c = 0; c < COLS; c++) {
+                if (r < surface) map[r][c] = 0; // Aire
+                else if (r === surface) map[r][c] = 1; // Pasto
+                else if (r < surface + 5) map[r][c] = 2; // Tierra
+                else map[r][c] = 3; // Piedra
+            }
+        }
 
-                function selectSlot(type) {
-                    activeBlockType = type;
-                    document.querySelectorAll('.slot').forEach(s => s.classList.remove('active'));
-                    document.getElementById('slot-' + type).classList.add('active');
+        const colors = { 1: '#22c55e', 2: '#854d0e', 3: '#6b7280' };
+
+        const p = {
+            x: Math.floor(COLS / 2) * TILE,
+            y: (surface - 2) * TILE,
+            w: 22,
+            h: 48,
+            vx: 0,
+            vy: 0,
+            ground: false
+        };
+
+        const keys = {};
+        window.addEventListener('keydown', e => keys[e.code] = true);
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        cv.addEventListener('mousedown', e => {
+            const c = Math.floor(e.clientX / TILE);
+            const r = Math.floor(e.clientY / TILE);
+            if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+                if (e.button === 0) map[r][c] = 0; // Romper bloque
+                else if (e.button === 2 && map[r][c] === 0) map[r][c] = 3; // Colocar piedra
+            }
+        });
+        cv.addEventListener('contextmenu', e => e.preventDefault());
+
+        function loop() {
+            if (keys['KeyA'] || keys['ArrowLeft']) p.vx = -4;
+            else if (keys['KeyD'] || keys['ArrowRight']) p.vx = 4;
+            else p.vx = 0;
+
+            if ((keys['KeyW'] || keys['Space']) && p.ground) {
+                p.vy = -9;
+                p.ground = false;
+            }
+
+            p.vy += 0.4;
+            p.x += p.vx;
+            p.y += p.vy;
+            p.ground = false;
+
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (map[r][c] !== 0) {
+                        const bx = c * TILE;
+                        const by = r * TILE;
+                        if (p.x < bx + TILE && p.x + p.w > bx && p.y < by + TILE && p.y + p.h > by) {
+                            if (p.vy > 0 && p.y + p.h - p.vy <= by) {
+                                p.y = by - p.h;
+                                p.vy = 0;
+                                p.ground = true;
+                            }
+                        }
+                    }
                 }
+            }
 
-                function startGame() {
-                    document.getElementById('menu').style.display = 'none';
-                    document.getElementById('game-container').style.display = 'block';
-                    initGame();
+            ctx.clearRect(0, 0, cv.width, cv.height);
+
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (map[r][c] !== 0) {
+                        ctx.fillStyle = colors[map[r][c]];
+                        ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
+                        ctx.strokeStyle = '#000';
+                        ctx.strokeRect(c * TILE, r * TILE, TILE, TILE);
+                    }
                 }
+            }
 
-                function initGame() {
-                    const canvas = document.getElementById('gameCanvas');
-                    const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(p.x, p.y, p.w, p.h);
 
-                    canvas.width = window.innerWidth;
-                    canvas.height = window.innerHeight;
-
-                    const TILE_SIZE = 36;
-                    const COLS = Math.ceil(canvas.width / TILE_SIZE);
-                    const ROWS = 70; // Capas profundas para minar hacia abajo
-
-                    const BLOCKS = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, DIAMOND: 4 };
-                    const COLORS = {
-                        [BLOCKS.GRASS]: '#4ade80',
-                        [BLOCKS.DIRT]: '#854d0e',
-                        [BLOCKS.STONE]: '#6b7280',
-                        [BLOCKS.DIAMOND]: '#06b6d4'
-                    };
-
-                    // Generar Terreno Profundo
-                    let world = [];
-                    const surfaceY = 10;
-
-                    for (let r = 0; r < ROWS; r++) {
-                        world[r] = [];
-                        for (let c = 0; c < COLS; c++) {
-                            if (r < surfaceY) world[r][c] = BLOCKS.AIR;
-                            else if (r === surfaceY) world[r][c] = BLOCKS.GRASS;
-                            else if (r < surfaceY + 6) world[r][c] = BLOCKS.DIRT;
-                            else {
-                                // Minerales aleatorios en la profundidad
-                                world[r][c] = (Math.random() < 0.08) ? BLOCKS.DIAMOND : BLOCKS.STONE;
-                            }
-                        }
-                    }
-
-                    // Jugador
-                    const player = {
-                        x: Math.floor(COLS / 2) * TILE_SIZE,
-                        y: (surfaceY - 2) * TILE_SIZE,
-                        width: 24,
-                        height: 54,
-                        vx: 0,
-                        vy: 0,
-                        grounded: false
-                    };
-
-                    const keys = {};
-                    window.addEventListener('keydown', e => keys[e.code] = true);
-                    window.addEventListener('keyup', e => keys[e.code] = false);
-
-                    // Minar o Construir
-                    canvas.addEventListener('mousedown', e => {
-                        const rect = canvas.getBoundingClientRect();
-                        const clickX = e.clientX - rect.left;
-                        const clickY = e.clientY - rect.top;
-
-                        const col = Math.floor(clickX / TILE_SIZE);
-                        const row = Math.floor(clickY / TILE_SIZE);
-
-                        if (row >= 0 && row < ROWS && col >= 0 && col < COLS) {
-                            if (e.button === 0) {
-                                world[row][col] = BLOCKS.AIR; // Romper bloque (picar abajo)
-                            } else if (e.button === 2 && world[row][col] === BLOCKS.AIR) {
-                                world[row][col] = activeBlockType; // Poner bloque activo
-                            }
-                        }
-                    });
-                    canvas.addEventListener('contextmenu', e => e.preventDefault());
-
-                    function update() {
-                        if (keys['KeyA'] || keys['ArrowLeft']) player.vx = -4.5;
-                        else if (keys['KeyD'] || keys['ArrowRight']) player.vx = 4.5;
-                        else player.vx = 0;
-
-                        if ((keys['Space'] || keys['KeyW'] || keys['ArrowUp']) && player.grounded) {
-                            player.vy = -10;
-                            player.grounded = false;
-                        }
-
-                        player.vy += 0.5; // Gravedad
-                        player.x += player.vx;
-                        player.y += player.vy;
-
-                        player.grounded = false;
-
-                        // Colisiones avanzadas
-                        for (let r = 0; r < ROWS; r++) {
-                            for (let c = 0; c < COLS; c++) {
-                                if (world[r][c] !== BLOCKS.AIR) {
-                                    const bx = c * TILE_SIZE;
-                                    const by = r * TILE_SIZE;
-
-                                    if (player.x < bx + TILE_SIZE && player.x + player.width > bx &&
-                                        player.y < by + TILE_SIZE && player.y + player.height > by) {
-                                        
-                                        if (player.vy > 0 && player.y + player.height - player.vy <= by) {
-                                            player.y = by - player.height;
-                                            player.vy = 0;
-                                            player.grounded = true;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    function render() {
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                        // Dibujar bloques
-                        for (let r = 0; r < ROWS; r++) {
-                            for (let c = 0; c < COLS; c++) {
-                                const b = world[r][c];
-                                if (b !== BLOCKS.AIR) {
-                                    ctx.fillStyle = COLORS[b];
-                                    ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                                    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-                                    ctx.strokeRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                                }
-                            }
-                        }
-
-                        // Dibujar Jugador estilo Steve
-                        ctx.fillStyle = '#ef4444'; // Cuerpo
-                        ctx.fillRect(player.x, player.y, player.width, player.height);
-
-                        ctx.fillStyle = '#fff';
-                        ctx.font = '12px sans-serif';
-                        ctx.fillText(document.getElementById('nickname').value, player.x - 5, player.y - 8);
-                    }
-
-                    function loop() {
-                        update();
-                        render();
-                        requestAnimationFrame(loop);
-                    }
-                    loop();
-                }
-            </script>
-        </body>
-        </html>
-    `);
+            requestAnimationFrame(loop);
+        }
+        loop();
+    }
+    </script>
+</body>
+</html>`);
 });
 
-app.listen(PORT, () => console.log(`Servidor iniciado en puerto ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor activo en el puerto ${PORT}`));
